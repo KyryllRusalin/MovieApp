@@ -65,7 +65,9 @@ object ApiModule {
             .Builder()
             .build()
     }
-    
+
+    @Provides
+    @Singleton
     fun provideRetrofit(baseUrl: String, gson: Gson, client: OkHttpClient): ApiServices =
         Retrofit.Builder()
             .baseUrl(baseUrl)
