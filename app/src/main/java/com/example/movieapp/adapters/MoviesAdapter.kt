@@ -46,8 +46,20 @@ class MoviesAdapter @Inject constructor() : RecyclerView.Adapter<MoviesAdapter.V
                     placeholder(R.drawable.poster_placeholder)
                     scale(Scale.FILL)
                 }
+
+                root.setOnClickListener {
+                    onItemClickListener?.let {
+                        it(item)
+                    }
+                }
             }
         }
+    }
+
+    private var onItemClickListener : ((MovieListResponse.Result) -> Unit)? = null
+
+    fun setOnItemClickListener(listener: (MovieListResponse.Result) -> Unit) {
+        onItemClickListener = listener
     }
 
     val differCallback = object : DiffUtil.ItemCallback<MovieListResponse.Result>() {

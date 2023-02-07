@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.movieapp.adapters.MoviesAdapter
 import com.example.movieapp.databinding.FragmentMoviesBinding
@@ -57,9 +58,16 @@ class MoviesFragment : Fragment() {
                                     layoutManager = LinearLayoutManager(requireContext())
                                     adapter = moviesAdapter
                                 }
+
+                                moviesAdapter.setOnItemClickListener {
+                                    val direction = MoviesFragmentDirections.actionMoviesFragmentToMoviesDetailsFragment(
+                                        it.id
+                                    )
+                                    findNavController().navigate(direction)
+                                }
                             }
                         }
-                        400 -> {
+                        404 -> {
                             Toast.makeText(requireContext(), "The resource you requested could not be found.",
                                 Toast.LENGTH_SHORT).show()
                         }
