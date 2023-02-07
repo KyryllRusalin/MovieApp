@@ -3,6 +3,7 @@ package com.example.movieapp.adapters
 import android.content.Context
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.AsyncListDiffer
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
@@ -14,7 +15,8 @@ import com.example.movieapp.response.MovieListResponse
 import com.example.movieapp.utils.Constants.POSTER_BASE_URL
 import javax.inject.Inject
 
-class MoviesAdapter @Inject constructor() : RecyclerView.Adapter<MoviesAdapter.ViewHolder>() {
+class MoviesAdapter @Inject constructor() :
+    PagingDataAdapter<MovieListResponse.Result, MoviesAdapter.ViewHolder>(differCallback) {
     private lateinit var binding: ItemMoviesBinding
     private lateinit var context: Context
 
@@ -26,11 +28,9 @@ class MoviesAdapter @Inject constructor() : RecyclerView.Adapter<MoviesAdapter.V
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.set(differ.currentList[position])
+        holder.set(getItem(position)!!)
         holder.setIsRecyclable(false)
     }
-
-    override fun getItemCount(): Int = differ.currentList.size
 
     inner class ViewHolder() : RecyclerView.ViewHolder(binding.root) {
         fun set(item: MovieListResponse.Result) {
@@ -62,21 +62,21 @@ class MoviesAdapter @Inject constructor() : RecyclerView.Adapter<MoviesAdapter.V
         onItemClickListener = listener
     }
 
-    val differCallback = object : DiffUtil.ItemCallback<MovieListResponse.Result>() {
-        override fun areItemsTheSame(
-            oldItem: MovieListResponse.Result,
-            newItem: MovieListResponse.Result
-        ): Boolean {
-            return oldItem.id == newItem.id
-        }
+    companion object {
+        val differCallback = object : DiffUtil.ItemCallback<MovieListResponse.Result>() {
+            override fun areItemsTheSame(
+                oldItem: MovieListResponse.Result,
+                newItem: MovieListResponse.Result
+            ): Boolean {
+                return oldItem.id == newItem.id
+            }
 
-        override fun areContentsTheSame(
-            oldItem: MovieListResponse.Result,
-            newItem: MovieListResponse.Result
-        ): Boolean {
-            return oldItem == newItem
+            override fun areContentsTheSame(
+                oldItem: MovieListResponse.Result,
+                newItem: MovieListResponse.Result
+            ): Boolean {
+                return oldItem == newItem
+            }
         }
     }
-
-    val differ = AsyncListDiffer(this, differCallback)
 }

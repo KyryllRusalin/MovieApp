@@ -5,14 +5,21 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.paging.LoadState
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.movieapp.adapters.LoadMoreAdapter
 import com.example.movieapp.adapters.MoviesAdapter
 import com.example.movieapp.databinding.FragmentMoviesBinding
 import com.example.movieapp.repository.ApiRepository
 import com.example.movieapp.response.MovieListResponse
+import com.example.movieapp.viewmodels.MoviesViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collect
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -22,8 +29,7 @@ import javax.inject.Inject
 class MoviesFragment : Fragment() {
     private lateinit var binding: FragmentMoviesBinding
 
-    @Inject
-    lateinit var apiRepository: ApiRepository
+    private val viewModel : MoviesViewModel by viewModels()
 
     @Inject
     lateinit var moviesAdapter: MoviesAdapter
@@ -39,51 +45,36 @@ class MoviesFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.apply {
-            prgBarMovies.visibility = View.VISIBLE
-            apiRepository.getPopularMoviesList(1).enqueue(object : Callback<MovieListResponse> {
-                override fun onResponse(
-                    call: Call<MovieListResponse>,
-                    response: Response<MovieListResponse>
-                ) {
-                    when(response.code()) {
-                        200 -> {
-                            prgBarMovies.visibility = View.GONE
-
-                            response.body().let { itBody ->
-                                if(itBody?.results!!.isNotEmpty()) {
-                                    moviesAdapter.differ.submitList(itBody.results)
-                                }
-
-                                rlMovies.apply {
-                                    layoutManager = LinearLayoutManager(requireContext())
-                                    adapter = moviesAdapter
-                                }
-
-                                moviesAdapter.setOnItemClickListener {
-                                    val direction = MoviesFragmentDirections.actionMoviesFragmentToMoviesDetailsFragment(
-                                        it.id
-                                    )
-                                    findNavController().navigate(direction)
-                                }
-                            }
-                        }
-                        404 -> {
-                            Toast.makeText(requireContext(), "The resource you requested could not be found.",
-                                Toast.LENGTH_SHORT).show()
-                        }
-                        401 -> {
-                            Toast.makeText(requireContext(), "Invalid API key: You must be granted a valid key.",
-                                Toast.LENGTH_SHORT).show()
-                        }
-                    }
+            lifecycleScope.launchWhenCreated {
+                viewModel.movieList.collect {
+                    moviesAdapter.submitData(it)
                 }
+            }
 
-                override fun onFailure(call: Call<MovieListResponse>, t: Throwable) {
-                    prgBarMovies.visibility = View.GONE
-                    Toast.makeText(requireContext(), "Failure",
-                        Toast.LENGTH_SHORT).show()
+            rlMovies.apply {
+                layoutManager = LinearLayoutManager(requireContext())
+                adapter = moviesAdapter
+            }
+
+            lifecycleScope.launchWhenCreated {
+                moviesAdapter.loadStateFlow.collect {
+                    val state = it.refresh
+                    prgBarMovies.isVisible = state is LoadState.Loading
                 }
-            })
+            }
+
+            rlMovies.adapter = moviesAdapter.withLoadStateFooter(
+                LoadMoreAdapter {
+                    moviesAdapter.retry()
+                }
+            )
+
+            moviesAdapter.setOnItemClickListener {
+                val directions = MoviesFragmentDirections.actionMoviesFragmentToMoviesDetailsFragment(
+                    it.id
+                )
+                findNavController().navigate(directions)
+            }
         }
     }
 }

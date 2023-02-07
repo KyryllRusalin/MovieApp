@@ -73,4 +73,8 @@ dependencies {
 
     //Coil (image loading)
     implementation 'io.coil-kt:coil:1.4.0'
+
+    //Paging
+    implementation 'androidx.paging:paging-common-ktx:3.1.1'
+    implementation 'androidx.paging:paging-runtime-ktx:3.1.1'
 }

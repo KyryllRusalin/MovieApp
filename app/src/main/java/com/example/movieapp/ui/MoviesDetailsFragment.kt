@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.navArgs
 import coil.load
 import coil.size.Scale
@@ -14,6 +15,8 @@ import com.example.movieapp.databinding.FragmentMoviesDetailsBinding
 import com.example.movieapp.repository.ApiRepository
 import com.example.movieapp.response.MovieDetailsResponse
 import com.example.movieapp.utils.Constants
+import com.example.movieapp.utils.Constants.POSTER_BASE_URL
+import com.example.movieapp.viewmodels.MoviesViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import retrofit2.Call
 import retrofit2.Callback
@@ -24,10 +27,9 @@ import javax.inject.Inject
 class MoviesDetailsFragment : Fragment() {
     private lateinit var binding : FragmentMoviesDetailsBinding
 
-    @Inject
-    lateinit var apiRepository: ApiRepository
-
+    private var movieId = 0
     private val args : MoviesDetailsFragmentArgs by navArgs()
+    private val viewModel: MoviesViewModel by viewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -37,63 +39,50 @@ class MoviesDetailsFragment : Fragment() {
         return binding.root
     }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        movieId = args.movieId
+        if (movieId > 0) {
+            viewModel.loadDetailsMovie(movieId)
+        }
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         val id = args.movieId
         binding.apply {
-            prgBarMovies.visibility = View.VISIBLE
-            apiRepository.getMovieDetails(id).enqueue(object: Callback<MovieDetailsResponse> {
-                override fun onResponse(
-                    call: Call<MovieDetailsResponse>,
-                    response: Response<MovieDetailsResponse>
-                ) {
-                    when(response.code()) {
-                        200 -> {
-                            prgBarMovies.visibility = View.GONE
-
-                            response.body().let {
-                                val moviePoster = Constants.POSTER_BASE_URL + it!!.posterPath
-
-                                tvMovieBudget.text = it.budget.toString()
-                                tvMovieOverview.text = it.overview
-                                tvMovieDateRelease.text = it.releaseDate
-                                tvMovieRating.text = it.voteAverage.toString()
-                                tvMovieRevenue.text = it.revenue.toString()
-                                tvMovieRuntime.text = it.runtime.toString()
-                                tvMovieTagLine.text = it.tagline
-                                tvMovieTitle.text = it.originalTitle
-
-                                imgMovie.load(moviePoster) {
-                                    crossfade(true)
-                                    placeholder(R.drawable.poster_placeholder)
-                                    scale(Scale.FILL)
-                                }
-                                imgMovieBack.load(moviePoster) {
-                                    crossfade(true)
-                                    placeholder(R.drawable.poster_placeholder)
-                                    scale(Scale.FILL)
-                                }
-                            }
-                        }
-                        401 -> {
-                            Toast.makeText(requireContext(), "Invalid API key: You must be granted a valid key.",
-                                Toast.LENGTH_SHORT).show()
-                        }
-                        404 -> {
-                            Toast.makeText(requireContext(), "The resource you requested could not be found.",
-                                Toast.LENGTH_SHORT).show()
-                        }
-                    }
+            viewModel.detailsMovie.observe(viewLifecycleOwner) { response ->
+                val moviePosterURL = POSTER_BASE_URL + response.posterPath
+                imgMovie.load(moviePosterURL) {
+                    crossfade(true)
+                    placeholder(R.drawable.poster_placeholder)
+                    scale(Scale.FILL)
+                }
+                imgMovieBack.load(moviePosterURL) {
+                    crossfade(true)
+                    placeholder(R.drawable.poster_placeholder)
+                    scale(Scale.FILL)
                 }
 
-                override fun onFailure(call: Call<MovieDetailsResponse>, t: Throwable) {
-                    prgBarMovies.visibility = View.GONE
-                    Toast.makeText(requireContext(), "Failure",
-                        Toast.LENGTH_SHORT).show()
-                }
+                tvMovieTitle.text = response.title
+                tvMovieTagLine.text = response.tagline
+                tvMovieDateRelease.text = response.releaseDate
+                tvMovieRating.text = response.voteAverage.toString()
+                tvMovieRuntime.text = response.runtime.toString()
+                tvMovieBudget.text = response.budget.toString()
+                tvMovieRevenue.text = response.revenue.toString()
+                tvMovieOverview.text = response.overview
+            }
 
-            })
+            viewModel.loading.observe(viewLifecycleOwner) {
+                if (it) {
+                    prgBarMovies.visibility = View.VISIBLE
+                } else {
+                    prgBarMovies.visibility = View.INVISIBLE
+                }
+            }
         }
     }
 }
